@@ -1,0 +1,28 @@
+# Model checkpoints
+*.pth
+
+# Data files
+*.nc
+mars_data/
+mars_cache_hpx/
+mars_cache_hpx_v2/
+mars_digital_twin/
+
+# Python
+__pycache__/
+*.pyc
+venv_mars/
+
+# Experiment tracking
+wandb/
+runs/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
