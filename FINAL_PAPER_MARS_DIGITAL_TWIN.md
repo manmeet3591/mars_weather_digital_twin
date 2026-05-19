@@ -1,11 +1,12 @@
 # Towards a Digital Twin of the Martian Atmosphere: Deep-Learning Weather Forecasting with HEALPix-Aware Convolutions and EMARS Reanalysis
 
-**Manmeet Singh^{1,2}, Naveen Sudharsan^1, Houman Owhadi^3, Krista Soderlund^1, Alphan Altinok^4**
+**Manmeet Singh^{1,2,3}, Saptarishi Dhanuka^3, Sandeep Juneja^3, Naveen Sudharsan^1, Houman Owhadi^4, Krista Soderlund^1, Alphan Altinok^5**
 
 ^1 *The University of Texas at Austin, Austin, Texas, USA*
 ^2 *Western Kentucky University, Bowling Green, Kentucky, USA*
-^3 *California Institute of Technology, Pasadena, California, USA*
-^4 *NASA Jet Propulsion Laboratory, Pasadena, California, USA*
+^3 *Ashoka University, Delhi-NCR, India*
+^4 *California Institute of Technology, Pasadena, California, USA*
+^5 *NASA Jet Propulsion Laboratory, Pasadena, California, USA*
 
 ## Abstract
 
