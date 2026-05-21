@@ -102,7 +102,11 @@ The Ensemble Mars Atmosphere Reanalysis System (EMARS) provides the best availab
 
 Parallel developments on Earth demonstrate that machine learning can emulate numerical weather models at a fraction of their cost. Karlbauer et al.~\cite{karlbauer2024} showed that a parsimonious deep-learning model forecasting only seven atmospheric variables on a ${\sim}110$~km HEALPix mesh~\cite{gorski2005healpix} with a 3-hour time step achieves one-week skill comparable to operational forecasts. Key innovations included switching from a cubed-sphere to a HEALPix mesh, which provides equal-area pixels without polar singularities; inverting the U-Net channel depth; and adding gated recurrent units. The DLESyM framework~\cite{wattmeyer2024} further advances this paradigm by coupling HEALPix-aware convolutional layers with inter-face padding that preserves spherical continuity. These efforts build on a broader wave of AI weather models including Pangu-Weather~\cite{bi2023pangu}, GraphCast~\cite{lam2023graphcast}, and FourCastNet~\cite{pathak2022fourcastnet}, which have demonstrated competitive skill with operational numerical weather prediction systems on Earth.
 
-The task of weather forecasting on Mars presents unique challenges compared to Earth. While Earth benefits from a dense network of in-situ observations, Mars observations are sparse, relying primarily on a limited number of orbiting spacecraft. This sparsity means the reanalysis ``ground truth'' is itself more dependent on the underlying physical model. Furthermore, Mars lacks oceans, which on Earth act as a massive thermal reservoir and primary driver of weather variability. The Martian surface is comparatively simpler, yet its thin atmosphere is highly responsive to solar forcing and dust loading, leading to rapid and occasionally violent changes in local conditions. Studying Mars allows us to test the limits of parsimonious models in a planetary environment free from complex oceanic interactions, potentially isolating core atmospheric behaviors.
+Despite this progress on Earth, comparatively little work has applied deep learning to Mars atmospheric prediction. Existing efforts have focused on dust storm detection and monitoring from orbital imagery~\cite{battalio2021,rodriguez2023}, and on conventional GCM-based forecasting for mission support~\cite{newman2021}. The hybrid NeuralGCM framework~\cite{kochkov2024neuralgcm}, which couples a differentiable dynamical core with learned physics parameterizations, represents a promising paradigm for planets where dust and radiation dominate the energy budget; however, it has not yet been applied to Mars.
+
+Mars differs fundamentally from Earth in ways that shape the weather prediction problem. Mars has roughly half Earth's radius (3,390~km vs.\ 6,371~km) and 38\% of its surface gravity. Its atmosphere is ${\sim}$95\% CO$_2$ with a mean surface pressure of only ${\sim}$610~Pa---less than 1\% of Earth's 101,325~Pa~\cite{haberle2019}. Surface temperatures range from ${\sim}$140~K at the winter poles to ${\sim}$300~K at equatorial noon, a span of ${\sim}$160~K compared to Earth's ${\sim}$100~K range, and diurnal swings of 60--80~K are common~\cite{read2015physics}. Wind speeds can reach 30~m/s, comparable to Earth's surface winds, but the thin atmosphere carries far less momentum. Crucially, Mars lacks oceans, which on Earth provide massive thermal inertia and drive weather variability through evaporation and latent heat release. The Martian surface responds almost instantaneously to solar forcing, producing rapid thermal tides and abrupt dust-driven regime transitions.
+
+These differences make Martian weather prediction both easier and harder than on Earth. The simpler surface boundary (no oceans, no vegetation, minimal topographic moisture effects) reduces the number of coupled processes a model must represent. However, the extreme sparsity of observations---limited to a handful of orbiting spacecraft and surface rovers~\cite{read2015physics}---means the reanalysis ``ground truth'' is more dependent on the underlying physical model. Furthermore, dust storms can restructure the atmospheric thermal profile within hours~\cite{montabone2015eight}, introducing abrupt nonlinearities absent from Earth's weather. Mars thus provides a challenging yet instructive testbed for data-driven weather models: success here in a data-sparse, dust-dominated regime would validate the broader applicability of these architectures beyond Earth.
 
 In this work, we adapt the DLESyM HEALPix-aware architecture to the Martian atmosphere and train it on EMARS reanalysis data. We demonstrate that the resulting model---with only 4.3 million parameters---learns to forecast temperature and wind fields with high fidelity for short lead times and can be unrolled autoregressively to provide stable 24-hour simulations. We compare this architecture against a baseline 3D U-Net to quantify the benefits of geometry-respecting convolutions.
 
@@ -182,13 +186,13 @@ HPX U-Net & ${\sim}$4.3M & 6 ($N_\text{s}$=64) & $\mathbf{1.58 \times 10^{-5}}$ 
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:comparison} summarizes the performance of the three configurations. The HEALPix U-Net at level~6 achieves an order-of-magnitude improvement in validation MSE over both the 3D U-Net baseline and the lower-resolution HEALPix U-Net, despite having nearly seven times fewer parameters than the 3D U-Net. This confirms that both spatial resolution and geometry-aware convolutions are significant contributors to forecast accuracy.
+Table~\ref{tab:comparison} summarizes the performance of the three configurations. The HEALPix U-Net at level~6 achieves an order-of-magnitude improvement in validation MSE over both the 3D U-Net baseline and the lower-resolution HEALPix U-Net, despite having nearly seven times fewer parameters than the 3D U-Net. We note that this comparison is not strictly controlled: the 3D U-Net was trained at lower resolution (level~3, $N_\text{side}=8$), with fewer epochs (20 vs.\ 50), and a different learning rate ($10^{-3}$ vs.\ $10^{-4}$). The comparison is therefore intended to illustrate the qualitative advantage of geometry-aware convolutions at scale rather than a rigorous ablation. A controlled study isolating the individual contributions of HEALPix padding, resolution, and ConvNeXt blocks is planned for future work (Section~\ref{sec:future}).
 
 \subsection{Short-Range Prediction Skill}
 
 The trained HEALPix U-Net accurately reproduces the three-dimensional structure of Martian temperature and wind fields in single-step (one-hour-ahead) predictions. Figure~\ref{fig:comparison} shows a global comparison between the EMARS ground truth and the model's prediction for surface temperature, regridded from HEALPix back to latitude--longitude for visualization. The model captures the large-scale thermal structure, including the strong temperature gradient across the polar regions, the warm equatorial band, and the cold southern polar vortex. The spatial correlation between prediction and ground truth is visually excellent, with the predicted field maintaining both the correct temperature range and the position of major features.
 
-The one-hour RMSE of approximately 0.004 in normalized units substantially outperforms persistence (which assumes the state at $t+1$ is identical to $t$). This demonstrates that the network has learned a dynamical propagation operator rather than a trivial identity mapping.
+The one-hour RMSE of approximately 0.004 in normalized units is well below the typical hourly variance in the EMARS fields, indicating that the network has learned a meaningful dynamical propagation operator rather than a trivial identity mapping. A formal comparison against a persistence baseline (which assumes the state at $t+1$ is identical to $t$) and a climatological baseline is deferred to future work, along with evaluation using probabilistic scoring rules such as CRPS~\cite{gneiting2007}.
 
 \begin{figure}[t]
     \centering
@@ -241,7 +245,11 @@ The Capped GELU activation~\cite{hendrycks2016} further contributes to rollout s
 
 Several factors currently limit the model's performance and applicability.
 
-\paragraph{Forecast horizon.} While the model remains stable for 24 hours, the RMSE at T+24\,h (${\sim}$0.029) is approximately seven times larger than at T+1\,h (${\sim}$0.004). Beyond ${\sim}$12 hours, the forecast increasingly reflects the model's learned climatology rather than the specific atmospheric evolution from the initial condition. Extending the useful forecast horizon likely requires incorporating temporal context (e.g., multiple input time steps or recurrent architectures) and additional prognostic variables.
+\paragraph{Normalized vs.\ physical-unit errors.} All errors in this study are reported in min-max normalized $[0, 1]$ units. To provide physical context: Mars surface temperature in EMARS spans approximately 140--300~K (a range of ${\sim}$160~K). An RMSE of 0.004 in normalized units thus corresponds to ${\sim}$0.6~K at T+1\,h, while 0.029 corresponds to ${\sim}$4.6~K at T+24\,h. For wind components with a typical range of ${\sim}$200~m/s across all levels, these translate to ${\sim}$0.8~m/s and ${\sim}$5.8~m/s respectively. Future work should report per-variable, per-level errors in physical units for direct comparison with GCM skill scores and Earth ML weather model benchmarks.
+
+\paragraph{Forecast horizon.} While the model remains stable for 24 hours, the RMSE at T+24\,h (${\sim}$0.029, or ${\sim}$4.6~K for temperature) is approximately seven times larger than at T+1\,h (${\sim}$0.004). Beyond ${\sim}$12 hours, the forecast increasingly reflects the model's learned climatology rather than the specific atmospheric evolution from the initial condition. Extending the useful forecast horizon likely requires incorporating temporal context (e.g., multiple input time steps or recurrent architectures) and additional prognostic variables.
+
+\paragraph{Weather vs.\ climate timescales.} Our 24-hour (one Martian sol) stable rollout demonstrates weather-timescale forecasting skill, but climate emulation demands stable integration over thousands of sols spanning seasonal and inter-annual variability. The monotonic error growth observed in Figure~\ref{fig:rollout_stability} suggests that the model would eventually saturate at its internal climatology rather than diverge, which is encouraging; however, maintaining physical fidelity over climate timescales will likely require enforcing conservation laws (mass, energy, angular momentum), coupling with surface and subsurface thermal models, and training on multi-year sequences spanning the full range of Martian seasons and dust storm activity.
 
 \paragraph{Aerosol representation.} Dust is a primary driver of the Martian atmospheric thermal structure~\cite{montabone2015eight,kahre2017}. During global dust storms, radiative heating of the atmosphere changes drastically. Our model, which forecasts only $T$, $U$, and $V$, cannot anticipate these aerosol-driven regime transitions. Incorporating dust and water-ice opacity as additional channels is a critical next step.
 
@@ -254,6 +262,33 @@ Several factors currently limit the model's performance and applicability.
 By demonstrating that a parsimonious model can capture the core dynamics of a different planet's atmosphere, we validate the cross-planetary applicability of HEALPix-based architectures. Mars serves as a useful testbed: its lack of oceans and relatively simple surface isolate atmospheric behaviors that are often masked by complex oceanic interactions on Earth. Insights from the Martian digital twin---particularly regarding the minimum model complexity needed to represent atmospheric dynamics---could inform more efficient architectures for Earth climate emulators.
 
 We envision a future system where a deep-learning digital twin is periodically updated with new spacecraft observations, allowing it to correct its forecasts toward the observed state, analogous to traditional Kalman filter-based systems but at a fraction of the computational cost.
+
+\subsection{Future Directions}
+\label{sec:future}
+
+Several avenues for extending this work follow naturally from the current limitations and recent advances in AI weather prediction:
+
+\begin{enumerate}
+    \item \textbf{Probabilistic forecasting.} Replace the deterministic MSE objective with ensemble or distributional prediction heads, evaluated using proper scoring rules such as CRPS~\cite{gneiting2007} and reliability diagrams, to quantify forecast uncertainty.
+
+    \item \textbf{Multi-step input conditioning.} Provide two or more consecutive time steps $(t{-}1, t)$ as input, following GraphCast~\cite{lam2023graphcast}, to supply implicit velocity information and reduce the temporal context bottleneck.
+
+    \item \textbf{Alternative architectures.} Evaluate graph neural networks on an icosahedral multi-mesh~\cite{keisler2022}, 3D attention mechanisms inspired by Pangu-Weather~\cite{bi2023pangu}, and spherical Fourier neural operators~\cite{bonev2023spherical} to benchmark against the HEALPix convolutional approach.
+
+    \item \textbf{Physics--ML hybrid coupling.} Adopt a NeuralGCM-style framework~\cite{kochkov2024neuralgcm} in which a differentiable dynamical core handles resolved dynamics while learned parameterizations represent dust radiative transfer and subgrid processes.
+
+    \item \textbf{Dust and surface pressure channels.} Incorporate column-integrated dust optical depth~\cite{montabone2015eight} and surface pressure as additional prognostic variables to capture aerosol-driven regime transitions.
+
+    \item \textbf{Transfer learning from Earth.} Investigate whether pretraining on ERA5 reanalysis and finetuning on EMARS improves data efficiency, leveraging the shared fluid-dynamical principles across planetary atmospheres.
+
+    \item \textbf{Direct GCM comparison.} Generate parallel forecasts from the GFDL/NASA Mars GCM~\cite{haberle2019} at matched resolution and lead times for a rigorous skill comparison.
+
+    \item \textbf{Additional observational data.} Assimilate rover meteorological measurements from REMS (Curiosity) and MEDA (Perseverance) and additional satellite products to constrain the near-surface boundary layer.
+
+    \item \textbf{Controlled ablation study.} Isolate the individual contributions of HEALPix padding, ConvNeXt blocks, resolution, and CappedGELU activations through systematic ablations at fixed computational budget.
+
+    \item \textbf{Extended rollout.} Test multi-sol and seasonal-scale stability to assess suitability for climate applications, incorporating conservation constraints to prevent long-term drift.
+\end{enumerate}
 
 % ===================================================================
 \section{Conclusions}
@@ -285,7 +320,7 @@ We thank the Keck Institute for Space Studies (KISS) at the California Institute
 
 \bibliographystyle{unsrtnat}
 
-\begin{thebibliography}{18}
+\begin{thebibliography}{25}
 
 \bibitem{wattmeyer2024}
 Watt-Meyer, O., Dresdner, G., McGibbon, J., et al. (2024).
@@ -381,6 +416,36 @@ Paszke, A., Gross, S., Massa, F., et al. (2019).
 Kingma, D.~P. and Ba, J. (2015).
 \newblock Adam: A method for stochastic optimization.
 \newblock In \textit{Proceedings of the 3rd International Conference on Learning Representations (ICLR)}.
+
+\bibitem{battalio2021}
+Battalio, J.~M. and Wang, H. (2021).
+\newblock The {M}ars dust activity database ({MDAD}): A comprehensive statistical study of dust storm sequences.
+\newblock \textit{Icarus}, 354:114059.
+
+\bibitem{rodriguez2023}
+Rodr\'{i}guez-Fern\'{a}ndez, N.~J., Forget, F., Montabone, L., et al. (2023).
+\newblock Monitoring {M}ars dust storms with machine learning applied to Mars Climate Sounder observations.
+\newblock \textit{Icarus}, 401:115596.
+
+\bibitem{newman2021}
+Newman, C.~E., Bertrand, T., Battalio, J.~M., et al. (2021).
+\newblock Multi-model meteorological and aeolian predictions for {M}ars~2020 and the {J}ezero crater region.
+\newblock \textit{Space Science Reviews}, 217(1):20.
+
+\bibitem{kochkov2024neuralgcm}
+Kochkov, D., Yuval, J., Langmore, I., et al. (2024).
+\newblock Neural general circulation models for weather and climate.
+\newblock \textit{Nature}, 632(8027):1060--1066.
+
+\bibitem{gneiting2007}
+Gneiting, T. and Raftery, A.~E. (2007).
+\newblock Strictly proper scoring rules, prediction, and estimation.
+\newblock \textit{Journal of the American Statistical Association}, 102(477):359--378.
+
+\bibitem{keisler2022}
+Keisler, R. (2022).
+\newblock Forecasting global weather with graph neural networks.
+\newblock \textit{arXiv preprint arXiv:2202.07575}.
 
 \end{thebibliography}
 
