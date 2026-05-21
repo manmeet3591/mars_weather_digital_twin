@@ -268,62 +268,63 @@ class MarsLazyDataset(Dataset):
         return x, y
 
 # --- MAIN EXECUTION ---
-log.info("Loading config and metadata...")
-file_list = sorted(glob.glob(DATA_PATH + '*.nc'))[:2]
-ds_min = xr.open_dataset('min_vals_mars_real.nc')
-ds_max = xr.open_dataset('max_vals_mars_real.nc')
+if __name__ == "__main__":
+    log.info("Loading config and metadata...")
+    file_list = sorted(glob.glob(DATA_PATH + '*.nc'))[:2]
+    ds_min = xr.open_dataset('min_vals_mars_real.nc')
+    ds_max = xr.open_dataset('max_vals_mars_real.nc')
 
-log.info("Checking/Creating HEALPix Sample Cache (Lazy)...")
-sample_files = cache_healpix_per_sample(file_list, ds_min, ds_max, level=LEVEL)
+    log.info("Checking/Creating HEALPix Sample Cache (Lazy)...")
+    sample_files = cache_healpix_per_sample(file_list, ds_min, ds_max, level=LEVEL)
 
-log.info(f"Initializing Lazy Dataset with {len(sample_files)} samples...")
-dataset = MarsLazyDataset(sample_files)
-train_size = int(0.8 * len(dataset))
-train_set, val_set = torch.utils.data.random_split(dataset, [train_size, len(dataset) - train_size])
-train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
-val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, num_workers=2)
+    log.info(f"Initializing Lazy Dataset with {len(sample_files)} samples...")
+    dataset = MarsLazyDataset(sample_files)
+    train_size = int(0.8 * len(dataset))
+    train_set, val_set = torch.utils.data.random_split(dataset, [train_size, len(dataset) - train_size])
+    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, num_workers=2)
 
-# --- TRAINING ---
-model = HEALPixUNet(84, 84).to(DEVICE)
-optimizer = optim.Adam(model.parameters(), lr=LR)
-criterion = nn.MSELoss()
+    # --- TRAINING ---
+    model = HEALPixUNet(84, 84).to(DEVICE)
+    optimizer = optim.Adam(model.parameters(), lr=LR)
+    criterion = nn.MSELoss()
 
-progress = []
-progress_file = f"progress_dlesym_level{LEVEL}.json"
-log.info("Starting training...")
-best_val_loss = float('inf')
-for epoch in range(EPOCHS):
-    model.train()
-    train_loss = 0
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}")
-    for inputs, targets in pbar:
-        inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-        train_loss += loss.item()
-        pbar.set_postfix({"loss": f"{loss.item():.6f}"})
-    
-    model.eval()
-    val_loss = 0
-    with torch.no_grad():
-        for inputs, targets in val_loader:
+    progress = []
+    progress_file = f"progress_dlesym_level{LEVEL}.json"
+    log.info("Starting training...")
+    best_val_loss = float('inf')
+    for epoch in range(EPOCHS):
+        model.train()
+        train_loss = 0
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}")
+        for inputs, targets in pbar:
             inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            optimizer.zero_grad()
             outputs = model(inputs)
-            val_loss += criterion(outputs, targets).item()
-    
-    train_loss /= len(train_loader)
-    val_loss /= len(val_loader)
-    log.info(f"Epoch {epoch+1}/{EPOCHS} - Train: {train_loss:.6f}, Val: {val_loss:.6f}")
-    
-    progress.append({"epoch": epoch+1, "train_loss": train_loss, "val_loss": val_loss})
-    with open(progress_file, "w") as f: json.dump(progress, f, indent=2)
-    
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        torch.save(model.state_dict(), f"best_model_dlesym_level{LEVEL}.pth")
-        log.info(f"  Saved best model! Val: {best_val_loss:.6f}")
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+            pbar.set_postfix({"loss": f"{loss.item():.6f}"})
 
-log.info("Training complete.")
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for inputs, targets in val_loader:
+                inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+                outputs = model(inputs)
+                val_loss += criterion(outputs, targets).item()
+
+        train_loss /= len(train_loader)
+        val_loss /= len(val_loader)
+        log.info(f"Epoch {epoch+1}/{EPOCHS} - Train: {train_loss:.6f}, Val: {val_loss:.6f}")
+
+        progress.append({"epoch": epoch+1, "train_loss": train_loss, "val_loss": val_loss})
+        with open(progress_file, "w") as f: json.dump(progress, f, indent=2)
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), f"best_model_dlesym_level{LEVEL}.pth")
+            log.info(f"  Saved best model! Val: {best_val_loss:.6f}")
+
+    log.info("Training complete.")

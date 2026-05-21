@@ -70,21 +70,27 @@ def main():
 
     fig, axs = plt.subplots(1, 2, figsize=(20, 8))
     extent = [0, 360, -90, 90]
-    
+
     im0 = axs[0].imshow(true_ll, cmap="inferno", extent=extent, origin='lower', aspect='auto')
-    axs[0].set_title("EMARS Ground Truth (T, surface)", fontsize=16)
-    axs[0].set_xlabel("Longitude [°E]", fontsize=12)
-    axs[0].set_ylabel("Latitude [°N]", fontsize=12)
-    plt.colorbar(im0, ax=axs[0], label="Normalized T")
+    axs[0].set_title("EMARS Ground Truth (T, surface)", fontsize=24, fontweight='bold')
+    axs[0].set_xlabel("Longitude [°E]", fontsize=20)
+    axs[0].set_ylabel("Latitude [°N]", fontsize=20)
+    axs[0].tick_params(axis='both', labelsize=16)
+    cb0 = plt.colorbar(im0, ax=axs[0])
+    cb0.set_label("Normalized T", fontsize=18)
+    cb0.ax.tick_params(labelsize=14)
 
     im1 = axs[1].imshow(pred_ll, cmap="inferno", extent=extent, origin='lower', aspect='auto')
-    axs[1].set_title(f"DLESyM Prediction Level {LEVEL}", fontsize=16)
-    axs[1].set_xlabel("Longitude [°E]", fontsize=12)
-    axs[1].set_ylabel("Latitude [°N]", fontsize=12)
-    plt.colorbar(im1, ax=axs[1], label="Normalized T")
+    axs[1].set_title(f"DLESyM Prediction Level {LEVEL}", fontsize=24, fontweight='bold')
+    axs[1].set_xlabel("Longitude [°E]", fontsize=20)
+    axs[1].set_ylabel("Latitude [°N]", fontsize=20)
+    axs[1].tick_params(axis='both', labelsize=16)
+    cb1 = plt.colorbar(im1, ax=axs[1])
+    cb1.set_label("Normalized T", fontsize=18)
+    cb1.ax.tick_params(labelsize=14)
 
     plt.tight_layout()
-    plt.savefig(f"dlesym_comparison_level{LEVEL}.png", dpi=300)
+    plt.savefig(f"dlesym_comparison_level{LEVEL}.png", dpi=300, bbox_inches='tight')
     print(f"Plot saved as dlesym_comparison_level{LEVEL}.png")
 
 if __name__ == "__main__":

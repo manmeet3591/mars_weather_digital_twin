@@ -81,13 +81,16 @@ def main():
         rmses.append(torch.sqrt(mse).item())
 
     # Plot Rollout Error
-    plt.figure(figsize=(10, 6))
-    plt.plot(range(1, ROLLOUT_STEPS + 1), rmses, marker='o', linewidth=2)
-    plt.title(f"Mars Digital Twin Rollout Stability (Level {LEVEL})", fontsize=14)
-    plt.xlabel("Forecast Horizon [hours]", fontsize=12)
-    plt.ylabel("RMSE (Normalized Temperature)", fontsize=12)
+    plt.figure(figsize=(10, 7))
+    plt.plot(range(1, ROLLOUT_STEPS + 1), rmses, marker='o', linewidth=3, markersize=8, color='#1f77b4')
+    plt.title(f"Mars Digital Twin Rollout Stability (Level {LEVEL})", fontsize=24, fontweight='bold')
+    plt.xlabel("Forecast Horizon [hours]", fontsize=20)
+    plt.ylabel("RMSE (Normalized Temperature)", fontsize=20)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     plt.grid(True, alpha=0.3)
-    plt.savefig("rollout_stability_level6.png", dpi=300)
+    plt.tight_layout()
+    plt.savefig("rollout_stability_level6.png", dpi=300, bbox_inches='tight')
     print("Rollout stability plot saved as rollout_stability_level6.png")
 
     # Final visual check at hour 24
@@ -99,19 +102,25 @@ def main():
     fig, axs = plt.subplots(1, 2, figsize=(20, 8))
     extent = [0, 360, -90, 90]
     im0 = axs[0].imshow(true_ll, cmap="inferno", extent=extent, origin='lower', aspect='auto')
-    axs[0].set_title("EMARS Ground Truth (T+24h)", fontsize=16)
-    axs[0].set_xlabel("Longitude [°E]")
-    axs[0].set_ylabel("Latitude [°N]")
-    plt.colorbar(im0, ax=axs[0])
+    axs[0].set_title("EMARS Ground Truth (T+24h)", fontsize=24, fontweight='bold')
+    axs[0].set_xlabel("Longitude [°E]", fontsize=20)
+    axs[0].set_ylabel("Latitude [°N]", fontsize=20)
+    axs[0].tick_params(axis='both', labelsize=16)
+    cb0 = plt.colorbar(im0, ax=axs[0])
+    cb0.set_label("Normalized T", fontsize=18)
+    cb0.ax.tick_params(labelsize=14)
 
     im1 = axs[1].imshow(pred_ll, cmap="inferno", extent=extent, origin='lower', aspect='auto')
-    axs[1].set_title(f"DLESyM 24h Forecast (Level {LEVEL})", fontsize=16)
-    axs[1].set_xlabel("Longitude [°E]")
-    axs[1].set_ylabel("Latitude [°N]")
-    plt.colorbar(im1, ax=axs[1])
+    axs[1].set_title(f"DLESyM 24h Forecast (Level {LEVEL})", fontsize=24, fontweight='bold')
+    axs[1].set_xlabel("Longitude [°E]", fontsize=20)
+    axs[1].set_ylabel("Latitude [°N]", fontsize=20)
+    axs[1].tick_params(axis='both', labelsize=16)
+    cb1 = plt.colorbar(im1, ax=axs[1])
+    cb1.set_label("Normalized T", fontsize=18)
+    cb1.ax.tick_params(labelsize=14)
 
     plt.tight_layout()
-    plt.savefig(f"rollout_comparison_24h_level{LEVEL}.png", dpi=300)
+    plt.savefig(f"rollout_comparison_24h_level{LEVEL}.png", dpi=300, bbox_inches='tight')
     print(f"24h comparison plot saved as rollout_comparison_24h_level{LEVEL}.png")
 
 if __name__ == "__main__":
